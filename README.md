@@ -99,7 +99,6 @@ python augment.py --target hedemil/test --augmentations mirror --episodes 0 --dr
 | `--dry-run` | false | Skip upload, keep local only |
 | `--private` | false | Upload as private dataset |
 | `--encoder-threads` | auto | Threads for AV1 video encoding (higher = faster) |
-| `--batch-encoding-size` | 32 | Episodes to batch before encoding (higher = better throughput) |
 
 CLI args override YAML values when both are provided.
 
@@ -157,11 +156,7 @@ The instruction variation augmentation uses exponential backoff retry (3 attempt
 
 ### Video Encoding Performance
 
-AV1 re-encoding is the primary bottleneck (~14 fps). The tool exposes two knobs:
-- `--encoder-threads N` — increases threads for AV1 encoding to utilize multiple CPU cores
-- `--batch-encoding-size N` — batches episodes before encoding, amortizing encoder startup overhead
-
-The LeRobot API's `save_episode()` already uses `ProcessPoolExecutor` for parallel video encoding internally. These flags give the user control over how aggressively to use CPU resources.
+AV1 re-encoding is the primary bottleneck (~14 fps). The tool exposes `--encoder-threads N` to increase threads for AV1 encoding and utilize multiple CPU cores. The LeRobot API's `save_episode()` already uses `ProcessPoolExecutor` for parallel video encoding internally.
 
 ### Testing
 
@@ -268,7 +263,7 @@ This project was built using **Claude Code (Claude Opus 4.6)** as an AI coding a
 **Agent workflow:**
 - **Tests:** Created `tests/` with 29 pytest tests. The critical ones: `TestDoubleFlipIdentity` asserts that `mirror(mirror(x)) == x` for state, action, and images — if the sign-flip indices are wrong, this fails. `TestSignFlip` verifies each specific joint (waist, forearm_roll, wrist_rotate) is negated. These catch the exact "poisoned dataset" scenario where a wrong sign on wrist rotation would produce physically impossible trajectories.
 - **API resilience:** Added exponential backoff retry (3 attempts, 2s/4s/8s) for transient Claude API errors. On persistent failure, falls back to original task text instead of crashing. This prevents losing an hour of video encoding because of a 502 on episode 49.
-- **Video encoding parallelism:** Exposed `--encoder-threads` and `--batch-encoding-size` flags that pass through to the LeRobot API's `ProcessPoolExecutor`-based video encoder. Rather than fighting the API's single-writer design with our own multiprocessing, we leverage the parallelism it already provides.
+- **Video encoding parallelism:** Exposed `--encoder-threads` flag that passes through to the LeRobot API's `ProcessPoolExecutor`-based video encoder. Rather than fighting the API's single-writer design with our own multiprocessing, we leverage the parallelism it already provides.
 
 ### Tools Used
 
@@ -303,6 +298,19 @@ tests/
 requirements.txt
 ```
 
+## Future Work & Scalability
+
+Given more time or compute resources, the following augmentations — inspired by recent VLA literature — would significantly expand this tool's capabilities:
+
+**Failure Scenario Injection.** Reward distillation and state-aware training require negative examples, not just successful demonstrations. An augmentation that intentionally truncates successful trajectories (e.g., dropping the last 20% of frames) or splices in repeated "stall" actions would create synthetic failure/retry data. This teaches VLA models to recognize and recover from failure states rather than only imitating success.
+
+**VLM-Powered Hierarchical Annotations.** Our current `instruction.py` paraphrases existing task descriptions using an LLM. A more powerful approach would integrate a Vision-Language Model (e.g., Claude Sonnet) to actually *watch* the video frames and generate rich scene captions, visual grounding annotations (bounding boxes for grasp points), and step-by-step sub-task decompositions. This would produce the kind of hierarchical instruction data that methods like InstructVLA and LLaRA leverage for improved spatial reasoning.
+
+**Consistent Visual Inpainting.** Our `visual.py` applies color jitter and blur — simple pixel-level transforms. Domain randomization could be taken much further with diffusion-based inpainting that swaps the entire background (e.g., moving the ALOHA robot from a lab to a kitchen) while maintaining temporal consistency across video frames. Epipolar-motion-aware approaches like ERMV ensure the inpainted background respects the camera geometry, preventing artifacts that would confuse a VLA model.
+
+**Cross-Embodiment Transfer.** Given the robot-specific presets already in `config.py`, a natural extension is augmenting datasets to simulate different embodiments — retargeting joint trajectories from a 7-DOF arm to a 6-DOF arm, or synthesizing camera views for robots with different mounting positions.
+
 ## References
 
 - Shin, D. (2025). *Enhancing Linguistic Generalization of VLA: Fine-Tuning OpenVLA via Synthetic Instruction Augmentation*. arXiv:2603.16044. [[paper]](https://arxiv.org/abs/2603.16044) — Informed our instruction variation prompt design and random-pairing strategy.
+- Yu, Z. et al. (2025). *A Survey on Efficient Vision-Language-Action Models*. arXiv:2510.24795. [[paper]](https://arxiv.org/abs/2510.24795) — Survey of VLA efficiency techniques including data augmentation strategies that inspired the future work directions above.
