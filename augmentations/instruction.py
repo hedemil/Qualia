@@ -59,7 +59,7 @@ class InstructionAugmentation(Augmentation):
         lines = [line.strip() for line in response.content[0].text.strip().split("\n") if line.strip()]
         return lines[:self.num_paraphrases]
 
-    def prepare(self, tasks: list[str]):
+    def prepare(self, tasks: list[str], robot_cfg: dict | None = None):
         """Pre-generate paraphrases for all unique tasks. Call before augmentation loop."""
         unique_tasks = set(tasks)
         for task in unique_tasks:

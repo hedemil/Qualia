@@ -60,9 +60,8 @@ python augment.py --source lerobot/aloha_static_cups_open \
 
 # With instruction variation (requires ANTHROPIC_API_KEY)
 python augment.py --source lerobot/aloha_static_cups_open \
-                  --target hedemil/aloha_cups_full \
-                  --augmentations mirror,visual,action_noise,instruction \
-                  --dry-run
+                  --target <your-username>/aloha_cups_full \
+                  --augmentations mirror,visual,action_noise,instruction
 
 # All options
 python augment.py --help

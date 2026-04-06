@@ -37,14 +37,32 @@ VISUAL_BLUR_PROBABILITY = 0.5
 ACTION_NOISE_STD = 0.01
 
 # =============================================================================
-# Mirror Augmentation Defaults (for ALOHA bimanual robots)
+# Robot-Specific Configurations (Presets)
 # =============================================================================
 
+ROBOT_CONFIGS = {
+    "aloha": {
+        "mirror": {
+            "arm_size": 7,
+            "sign_flip_within_arm": [0, 3, 5],
+            "camera_swap_pairs": [
+                ("observation.images.cam_left_wrist", "observation.images.cam_right_wrist"),
+            ],
+        }
+    },
+    # Placeholder for other common robots
+    "so_100": {
+        "mirror": {
+            "arm_size": 6,
+            "sign_flip_within_arm": [1, 2],
+            "camera_swap_pairs": [],
+        }
+    },
+}
+
+# Default fallbacks if robot_type is unknown or metadata is missing
 MIRROR_ARM_SIZE = 7
-# Indices within each arm to sign-flip under mirroring
-# For ALOHA: waist (0), forearm_roll (3), wrist_rotate (5)
 MIRROR_SIGN_FLIP_WITHIN_ARM = [0, 3, 5]
-# Camera pairs to swap under mirroring
 MIRROR_CAMERA_SWAP_PAIRS = [
     ("observation.images.cam_left_wrist", "observation.images.cam_right_wrist"),
 ]
