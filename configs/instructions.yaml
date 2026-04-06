@@ -1,7 +1,7 @@
-# Full pipeline — all augmentations with custom parameters
+# Instruction variation only — LLM-based task paraphrasing
 # Usage: python augment.py --config configs/instructions.yaml --target hedemil/my_dataset
 #
-# Requires ANTHROPIC_API_KEY in .env for instruction variation
+# Requires ANTHROPIC_API_KEY in .env
 
 source: lerobot/aloha_static_cups_open
 

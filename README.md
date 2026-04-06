@@ -118,6 +118,7 @@ Pre-built configs in `configs/`:
 - `heavy_visual_noise.yaml` — aggressive visual augmentation (brightness 0.5, blur 0.8 probability)
 - `full_pipeline.yaml` — all augmentations including LLM instruction variation
 - `mirror_only.yaml` — just mirroring (fastest, doubles dataset)
+- `instructions.yaml` — instruction variation only (requires `ANTHROPIC_API_KEY`)
 
 Create your own by copying and editing any config. No Python code changes needed.
 
@@ -290,8 +291,9 @@ configs/
     heavy_visual_noise.yaml  # Aggressive visual noise
     full_pipeline.yaml   # All augmentations
     mirror_only.yaml     # Just mirroring
+    instructions.yaml    # Instruction variation only
 tests/
-    test_mirror.py       # Kinematic correctness tests (21 tests)
+    test_mirror.py       # Kinematic correctness tests (15 tests)
     test_visual.py       # Visual safety tests (7 tests)
     test_action_noise.py # Noise statistical tests (7 tests)
 .env.example             # Template for API keys
