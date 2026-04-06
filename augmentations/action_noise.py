@@ -1,4 +1,11 @@
-"""Action and state noise augmentation: add Gaussian noise to action and observation.state vectors."""
+"""Action and state noise augmentation: add Gaussian noise to action and observation.state vectors.
+
+Physical safety: The default noise_std (0.01) is small relative to typical joint
+ranges (radians). This introduces variation without creating physically impossible
+states. For safety-critical applications, validate that noise_std is appropriate
+for your robot's joint limits. The augmented stats.json is automatically recomputed
+by the pipeline, so normalization layers will account for the added variance.
+"""
 
 import numpy as np
 
