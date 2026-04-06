@@ -105,6 +105,13 @@ def run_pipeline(
     aug_names = [a.name for a in augmentations] if augmentations else ["identity"]
     print(f"Augmentations: {aug_names}")
 
+    # Prepare augmentations that need upfront data (e.g. instruction variation needs task list)
+    all_tasks = list(src.meta.tasks.index)  # task strings
+    for aug in augmentations:
+        if hasattr(aug, "prepare"):
+            print(f"Preparing augmentation: {aug.name}")
+            aug.prepare(all_tasks)
+
     for ep_idx in tqdm(episode_indices, desc="Episodes"):
         from_idx, to_idx = get_episode_frame_range(src, ep_idx)
         num_frames = to_idx - from_idx

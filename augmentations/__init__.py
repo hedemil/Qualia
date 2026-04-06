@@ -24,3 +24,4 @@ def get_augmentation(name: str, **kwargs) -> Augmentation:
 from augmentations import mirror  # noqa: F401, E402
 from augmentations import visual  # noqa: F401, E402
 from augmentations import action_noise  # noqa: F401, E402
+from augmentations import instruction  # noqa: F401, E402
