@@ -101,7 +101,7 @@ class InstructionAugmentation(Augmentation):
         print(f"  Falling back to original task text.")
         return []
 
-    def prepare(self, tasks: list[str], robot_cfg: dict | None = None):
+    def prepare(self, tasks: list[str], robot_cfg: dict | None = None, stats: dict | None = None):
         """Pre-generate paraphrases for all unique tasks. Call before augmentation loop."""
         unique_tasks = set(tasks)
         for task in unique_tasks:

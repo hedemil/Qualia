@@ -24,12 +24,13 @@ class Augmentation(ABC):
             Modified frame dict (should be a copy, not in-place).
         """
 
-    def prepare(self, tasks: list[str], robot_cfg: dict | None = None):
+    def prepare(self, tasks: list[str], robot_cfg: dict | None = None, stats: dict | None = None):
         """Prepare augmentation with dataset-specific metadata.
 
         Args:
             tasks: List of all unique task strings in the dataset.
             robot_cfg: Dictionary with robot-specific settings from config.py.
+            stats: Per-feature stats dict with 'min'/'max' numpy arrays, keyed by feature name.
         """
         pass
 

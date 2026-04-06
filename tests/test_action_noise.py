@@ -70,8 +70,55 @@ class TestActionNoise:
         result = noise_aug.apply_frame(sample_frame, metadata)
         np.testing.assert_array_equal(result["observation.images.cam_high"], original)
 
-    def test_statistical_properties(self, noise_aug, metadata):
-        """Over many samples, noise should be zero-mean with correct std."""
+    def test_clipping_enforces_bounds(self, metadata):
+        """Noisy values must be clipped to dataset min/max when stats are provided."""
+        aug = ActionNoiseAugmentation(noise_std=1.0)  # Large noise to force clipping
+        stats = {
+            "action": {
+                "min": np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float32),
+                "max": np.array([1.0, 1.0, 1.0, 1.0], dtype=np.float32),
+                "std": np.array([0.5, 0.5, 0.5, 0.5], dtype=np.float32),
+            },
+            "observation.state": {
+                "min": np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float32),
+                "max": np.array([1.0, 1.0, 1.0, 1.0], dtype=np.float32),
+                "std": np.array([0.5, 0.5, 0.5, 0.5], dtype=np.float32),
+            },
+        }
+        aug.prepare([], stats=stats)
+        frame = {
+            "action": np.array([0.5, 0.5, 0.5, 0.5], dtype=np.float32),
+            "observation.state": np.array([0.5, 0.5, 0.5, 0.5], dtype=np.float32),
+            "observation.images.cam_high": np.zeros((8, 8, 3), dtype=np.uint8),
+            "task": "test",
+        }
+        for _ in range(100):
+            result = aug.apply_frame(frame, metadata)
+            assert np.all(result["action"] >= 0.0)
+            assert np.all(result["action"] <= 1.0)
+            assert np.all(result["observation.state"] >= 0.0)
+            assert np.all(result["observation.state"] <= 1.0)
+
+    def test_no_clipping_without_stats(self, metadata):
+        """Without stats, values can exceed any range (no clipping applied)."""
+        aug = ActionNoiseAugmentation(noise_std=1.0)
+        # No prepare() call — stats remain empty
+        frame = {
+            "action": np.array([0.5, 0.5, 0.5, 0.5], dtype=np.float32),
+            "observation.state": np.array([0.5, 0.5, 0.5, 0.5], dtype=np.float32),
+            "observation.images.cam_high": np.zeros((8, 8, 3), dtype=np.uint8),
+            "task": "test",
+        }
+        saw_out_of_range = False
+        for _ in range(100):
+            result = aug.apply_frame(frame, metadata)
+            if np.any(result["action"] < 0.0) or np.any(result["action"] > 1.0):
+                saw_out_of_range = True
+                break
+        assert saw_out_of_range, "With noise_std=1.0 and no clipping, values should exceed [0,1]"
+
+    def test_statistical_properties_without_stats(self, noise_aug, metadata):
+        """Without stats, noise should be uniform across dims with std = noise_std."""
         base_action = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
         diffs = []
         for _ in range(10000):
@@ -85,7 +132,33 @@ class TestActionNoise:
             diffs.append(result["action"] - base_action)
 
         diffs = np.array(diffs)
-        # Mean should be approximately 0
         np.testing.assert_almost_equal(diffs.mean(), 0.0, decimal=2)
-        # Std should be approximately noise_std
         np.testing.assert_almost_equal(diffs.std(), 0.01, decimal=2)
+
+    def test_statistical_properties_with_stats(self, metadata):
+        """With stats, noise std per dimension should scale by dimension std."""
+        aug = ActionNoiseAugmentation(noise_std=0.01)
+        dim_stds = np.array([0.1, 1.0, 0.5, 2.0], dtype=np.float32)
+        stats = {
+            "action": {
+                "min": np.array([-10, -10, -10, -10], dtype=np.float32),
+                "max": np.array([10, 10, 10, 10], dtype=np.float32),
+                "std": dim_stds,
+            },
+        }
+        aug.prepare([], stats=stats)
+
+        base_action = np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float32)
+        diffs = []
+        for _ in range(10000):
+            frame = {"action": base_action.copy(), "task": "test"}
+            result = aug.apply_frame(frame, metadata)
+            diffs.append(result["action"] - base_action)
+
+        diffs = np.array(diffs)
+        # Each dimension's noise std should be noise_std * dim_std
+        for d in range(4):
+            expected = 0.01 * dim_stds[d]
+            actual = diffs[:, d].std()
+            np.testing.assert_almost_equal(actual, expected, decimal=3,
+                err_msg=f"Dim {d}: expected std {expected}, got {actual}")

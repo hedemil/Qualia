@@ -134,12 +134,24 @@ def run_pipeline(
     else:
         print(f"Detected robot: {robot_type} (no preset found, using defaults)")
 
+    # Extract min/max stats for safety clipping in noise augmentations
+    feature_stats = {}
+    for key in ["action", "observation.state"]:
+        if key in src.meta.stats:
+            s = src.meta.stats[key]
+            to_np = lambda v: v.numpy() if hasattr(v, "numpy") else np.asarray(v)
+            feature_stats[key] = {
+                "min": to_np(s["min"]),
+                "max": to_np(s["max"]),
+                "std": to_np(s["std"]),
+            }
+
     # Prepare augmentations that need upfront data (e.g. instruction variation needs task list)
     all_tasks = list(src.meta.tasks.index)  # task strings
     for aug in augmentations:
         if hasattr(aug, "prepare"):
             print(f"Preparing augmentation: {aug.name}")
-            aug.prepare(all_tasks, robot_cfg=robot_cfg)
+            aug.prepare(all_tasks, robot_cfg=robot_cfg, stats=feature_stats)
 
     for ep_idx in tqdm(episode_indices, desc="Episodes"):
         from_idx, to_idx = get_episode_frame_range(src, ep_idx)
