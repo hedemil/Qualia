@@ -75,6 +75,8 @@ def run_pipeline(
     episodes: list[int] | None = None,
     dry_run: bool = False,
     private: bool = False,
+    encoder_threads: int | None = None,
+    batch_encoding_size: int = 32,
 ):
     """Run the full augmentation pipeline.
 
@@ -85,6 +87,8 @@ def run_pipeline(
         episodes: Optional list of episode indices to process. None = all.
         dry_run: If True, skip push_to_hub.
         private: If True, upload as private dataset.
+        encoder_threads: Number of threads for AV1 encoding. None = auto.
+        batch_encoding_size: Episodes to batch before encoding. Higher = better throughput.
     """
     if augmentations is None:
         augmentations = []
@@ -113,7 +117,14 @@ def run_pipeline(
         fps=src.meta.fps,
         features=create_features,
         robot_type=src.meta.info.get("robot_type"),
+        encoder_threads=encoder_threads,
+        batch_encoding_size=batch_encoding_size,
     )
+
+    if encoder_threads:
+        print(f"Video encoding: {encoder_threads} threads, batch size {batch_encoding_size}")
+    else:
+        print(f"Video encoding: auto threads, batch size {batch_encoding_size}")
 
     aug_names = [a.name for a in augmentations] if augmentations else ["identity"]
     print(f"Augmentations: {aug_names}")

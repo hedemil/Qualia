@@ -98,6 +98,8 @@ python augment.py --target hedemil/test --augmentations mirror --episodes 0 --dr
 | `--episodes` | all | Comma-separated episode indices |
 | `--dry-run` | false | Skip upload, keep local only |
 | `--private` | false | Upload as private dataset |
+| `--encoder-threads` | auto | Threads for AV1 video encoding (higher = faster) |
+| `--batch-encoding-size` | 32 | Episodes to batch before encoding (higher = better throughput) |
 
 CLI args override YAML values when both are provided.
 
@@ -148,6 +150,31 @@ Robotics augmentations must preserve physical consistency — corrupted data pro
 ### Robot-Specific Presets
 
 The mirror augmentation requires knowing which joints to swap and sign-flip, which varies by robot morphology. Rather than hardcoding for one robot, `config.py` contains presets for 5 robot types that are auto-selected based on dataset metadata.
+
+### API Resilience
+
+The instruction variation augmentation uses exponential backoff retry (3 attempts) for transient API errors (rate limits, 502s, timeouts). On persistent failure, it **falls back to the original task text** rather than crashing — losing instruction variation on one task is acceptable, losing an hour of video encoding is not.
+
+### Video Encoding Performance
+
+AV1 re-encoding is the primary bottleneck (~14 fps). The tool exposes two knobs:
+- `--encoder-threads N` — increases threads for AV1 encoding to utilize multiple CPU cores
+- `--batch-encoding-size N` — batches episodes before encoding, amortizing encoder startup overhead
+
+The LeRobot API's `save_episode()` already uses `ProcessPoolExecutor` for parallel video encoding internally. These flags give the user control over how aggressively to use CPU resources.
+
+### Testing
+
+29 unit tests verify augmentation correctness, especially the kinematic math:
+
+```bash
+pytest tests/ -v
+```
+
+Key test categories:
+- **Mirror kinematic tests**: arm swap, per-joint sign flip, double-flip identity (`mirror(mirror(x)) == x`)
+- **Visual safety tests**: images modified but state/action vectors untouched
+- **Noise statistical tests**: zero-mean, correct std, dtype preservation
 
 ## How it works
 
@@ -220,17 +247,25 @@ This project was built using **Claude Code (Claude Opus 4.6)** as an AI coding a
 **Agent workflow:**
 - Built each augmentation one at a time, testing after each: mirror → visual → action_noise → instruction
 - For mirror augmentation, the agent needed to understand ALOHA's joint naming convention (`left_waist`, `left_shoulder`, ..., `right_gripper`) from the dataset's `features.names` metadata to determine which indices to swap and sign-flip
-- When the instruction augmentation hit `anthropic.BadRequestError` (insufficient credits), the agent added a graceful error message with a link to the billing page
 
 ### Phase 4: Config System & Polish
 
-**Problem:** The user identified that hardcoded parameters wouldn't impress — needed a dynamic config system.
+**Problem:** The user identified hardcoded parameters — needed a dynamic config system.
 
 **Agent workflow:**
 - Implemented `--config` flag with YAML loading, merging with CLI args
 - Created example configs for different use cases (`heavy_visual_noise.yaml`, `full_pipeline.yaml`, etc.)
 - Added robot-specific presets in `config.py` for 5 robot types, auto-detected from dataset metadata
 - Added physical safety comments to each augmentation explaining why it's safe for VLA training
+
+### Phase 5: Review Response
+
+**Problem:** Self-review identified 3 gaps.
+
+**Agent workflow:**
+- **Tests:** Created `tests/` with 29 pytest tests. The critical ones: `TestDoubleFlipIdentity` asserts that `mirror(mirror(x)) == x` for state, action, and images — if the sign-flip indices are wrong, this fails. `TestSignFlip` verifies each specific joint (waist, forearm_roll, wrist_rotate) is negated. These catch the exact "poisoned dataset" scenario where a wrong sign on wrist rotation would produce physically impossible trajectories.
+- **API resilience:** Added exponential backoff retry (3 attempts, 2s/4s/8s) for transient Claude API errors. On persistent failure, falls back to original task text instead of crashing. This prevents losing an hour of video encoding because of a 502 on episode 49.
+- **Video encoding parallelism:** Exposed `--encoder-threads` and `--batch-encoding-size` flags that pass through to the LeRobot API's `ProcessPoolExecutor`-based video encoder. Rather than fighting the API's single-writer design with our own multiprocessing, we leverage the parallelism it already provides.
 
 ### Tools Used
 
@@ -257,6 +292,10 @@ configs/
     heavy_visual_noise.yaml  # Aggressive visual noise
     full_pipeline.yaml   # All augmentations
     mirror_only.yaml     # Just mirroring
+tests/
+    test_mirror.py       # Kinematic correctness tests (21 tests)
+    test_visual.py       # Visual safety tests (7 tests)
+    test_action_noise.py # Noise statistical tests (7 tests)
 .env.example             # Template for API keys
 requirements.txt
 ```
