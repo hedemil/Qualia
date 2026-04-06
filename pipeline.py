@@ -1,4 +1,16 @@
-"""Core pipeline: download source dataset, apply augmentations, upload to Hub."""
+"""Core pipeline: download source dataset, apply augmentations, upload to Hub.
+
+Memory management: The pipeline processes data episode-by-episode, never loading
+the entire dataset into RAM. Each episode's frames are read one at a time from
+the source (video-decoded on the fly), transformed, written to the target via
+add_frame(), then flushed to disk on save_episode(). This keeps memory usage
+proportional to a single frame (~3.5MB for 4x 480x640 images), not the dataset size.
+
+Physical integrity: Stats (mean/std/min/max for all features) are recomputed
+incrementally by save_episode() for each episode written. The final stats.json
+in the augmented dataset reflects the augmented data, so normalization layers
+in downstream VLA training will use correct statistics.
+"""
 
 import shutil
 from pathlib import Path

@@ -1,0 +1,11 @@
+# Default augmentation config
+# Usage: python augment.py --config configs/default.yaml --target hedemil/my_dataset
+
+source: lerobot/aloha_static_cups_open
+
+augmentations:
+  - name: mirror
+  - name: visual
+  - name: action_noise
+
+# episodes: [0, 1, 2]  # Uncomment to process specific episodes (default: all)

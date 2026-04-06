@@ -1,0 +1,17 @@
+# Heavy visual noise config — aggressive augmentation for visual robustness
+# Usage: python augment.py --config configs/heavy_visual_noise.yaml --target hedemil/my_dataset
+
+source: lerobot/aloha_static_cups_open
+
+augmentations:
+  - name: visual
+    params:
+      brightness: 0.5
+      contrast: 0.5
+      saturation: 0.5
+      blur_max_kernel: 7
+      blur_probability: 0.8
+
+  - name: action_noise
+    params:
+      noise_std: 0.02

@@ -1,4 +1,12 @@
-"""Episode mirroring augmentation: horizontal flip + left/right arm swap."""
+"""Episode mirroring augmentation: horizontal flip + left/right arm swap.
+
+Physical safety: Mirroring is physically consistent because it jointly transforms
+BOTH the visual observations AND the action/state vectors. Images are flipped,
+left/right arm joints are swapped, and joints whose rotation direction reverses
+under mirroring (waist, forearm_roll, wrist_rotate) are sign-flipped. This ensures
+the augmented data represents a valid physical trajectory, not a corrupted one.
+Camera pairs (e.g. left_wrist ↔ right_wrist) are also swapped to maintain consistency.
+"""
 
 import numpy as np
 

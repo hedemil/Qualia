@@ -1,4 +1,11 @@
-"""Visual augmentations: color jitter and Gaussian blur, applied consistently per episode."""
+"""Visual augmentations: color jitter and Gaussian blur, applied consistently per episode.
+
+Physical safety: Visual augmentations modify only camera images, NOT action or state
+vectors. This is safe because the robot's physical commands remain unchanged — only
+the visual input varies, teaching VLA models to be robust to lighting conditions.
+Parameters are sampled once per episode so all frames in an episode share the same
+transform, preserving temporal consistency (no flickering artifacts).
+"""
 
 import cv2
 import numpy as np

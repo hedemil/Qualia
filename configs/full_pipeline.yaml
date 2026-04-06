@@ -1,0 +1,30 @@
+# Full pipeline — all augmentations with custom parameters
+# Usage: python augment.py --config configs/full_pipeline.yaml --target hedemil/my_dataset
+#
+# Requires ANTHROPIC_API_KEY in .env for instruction variation
+
+source: lerobot/aloha_static_cups_open
+
+augmentations:
+  - name: mirror
+    # Mirror params auto-detected from robot_type in dataset metadata.
+    # Override here if needed:
+    # params:
+    #   arm_size: 7
+    #   sign_flip_within_arm: [0, 3, 5]
+
+  - name: visual
+    params:
+      brightness: 0.3
+      contrast: 0.3
+      saturation: 0.3
+      blur_max_kernel: 5
+      blur_probability: 0.5
+
+  - name: action_noise
+    params:
+      noise_std: 0.01
+
+  - name: instruction
+    params:
+      num_paraphrases: 5
