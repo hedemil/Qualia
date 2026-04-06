@@ -201,10 +201,13 @@ Mirroring handles both camera and joint transformations:
 
 ### Instruction variation details
 
-- Calls Claude API once per unique task at startup to generate paraphrases
+Informed by [**"Enhancing Linguistic Generalization of VLA: Fine-Tuning OpenVLA via Synthetic Instruction Augmentation"**](https://arxiv.org/abs/2603.16044) (Shin, 2025), which demonstrated that structured linguistic diversity improves VLA generalization. The paper showed that generating paraphrases with explicit variation along three axes — **sentence structure** (imperative/goal-oriented/conditional), **abstraction level** (motor-level vs. intent-level), and **vocabulary** (synonym substitution) — then randomly pairing them with trajectories during training, decouples linguistic patterns from rigid task labels and improves 5-bin tolerance accuracy.
+
+Our implementation applies this approach:
+- Calls Claude API once per unique task at startup with a structured prompt (see `config.py`) requesting variation across all three axes
 - Paraphrases are cached — no repeated API calls during frame processing
-- Each augmented episode gets a randomly selected paraphrase
-- Prompt and model are configurable in `config.py`
+- Each augmented episode gets a randomly selected paraphrase, matching the paper's random-pairing strategy
+- Prompt template and model are configurable in `config.py`
 
 ## Performance
 
@@ -299,3 +302,7 @@ tests/
 .env.example             # Template for API keys
 requirements.txt
 ```
+
+## References
+
+- Shin, D. (2025). *Enhancing Linguistic Generalization of VLA: Fine-Tuning OpenVLA via Synthetic Instruction Augmentation*. arXiv:2603.16044. [[paper]](https://arxiv.org/abs/2603.16044) — Informed our instruction variation prompt design and random-pairing strategy.
