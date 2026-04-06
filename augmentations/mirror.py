@@ -44,7 +44,7 @@ class MirrorAugmentation(Augmentation):
             for idx in self.sign_flip_within_arm:
                 self._sign_flip_indices.append(offset + idx)
 
-    def prepare(self, tasks: list[str], robot_cfg: dict | None = None):
+    def prepare(self, tasks: list[str], robot_cfg: dict | None = None, stats: dict | None = None):
         """Update settings based on robot metadata."""
         if not robot_cfg:
             return

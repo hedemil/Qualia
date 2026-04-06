@@ -12,7 +12,7 @@ Takes a source LeRobot dataset, applies one or more augmentations, and produces 
 |---|---|---|
 | Episode Mirroring | `mirror` | Horizontally flips camera images and swaps left/right arm joints. Supports dynamic detection for **ALOHA, Mobile ALOHA, SO-100, Koch, and UMI**. |
 | Visual Jitter | `visual` | Applies random color jitter (brightness, contrast, saturation) and Gaussian blur. Parameters are sampled once per episode for temporal consistency. |
-| Action/State Noise | `action_noise` | Adds Gaussian noise to both `action` and `observation.state` vectors for regularization. |
+| Action/State Noise | `action_noise` | Adds per-dimension scaled Gaussian noise to `action` and `observation.state` vectors, with safety clipping to dataset bounds. |
 | Instruction Variation | `instruction` | Uses Claude API to generate paraphrased task descriptions (e.g., "Pick up the cup" becomes "Grasp the mug"). Requires `ANTHROPIC_API_KEY`. |
 
 Augmentations can be combined: `--augmentations mirror,visual,action_noise,instruction`
@@ -144,7 +144,7 @@ Robotics augmentations must preserve physical consistency — corrupted data pro
 
 - **Visual augmentations** modify only camera images, never action/state vectors. This is safe because the robot's physical commands remain unchanged — only the visual input varies.
 - **Mirror augmentation** jointly transforms both visual observations AND action/state vectors. Images are flipped, left/right arm joints are swapped, and rotation-direction-dependent joints are sign-flipped. This ensures augmented trajectories are physically valid.
-- **Action/state noise** uses small `noise_std` (default 0.01 rad) relative to typical joint ranges. Validate appropriateness for your robot's joint limits.
+- **Action/state noise** scales noise per dimension: each joint's noise std = `noise_std × dimension_std` from the dataset stats, so joints with small ranges get small noise and joints with large ranges get proportionally larger noise. Augmented values are clipped to the dataset's observed `[min, max]` to prevent physically impossible states.
 - **Stats recalculation**: `save_episode()` incrementally recomputes `stats.json` (mean/std/min/max) for the augmented dataset, so normalization layers in downstream VLA training use correct statistics and don't crash or diverge.
 
 ### Robot-Specific Presets
@@ -161,7 +161,7 @@ AV1 re-encoding is the primary bottleneck (~14 fps). The tool exposes `--encoder
 
 ### Testing
 
-29 unit tests verify augmentation correctness, especially the kinematic math:
+32 unit tests verify augmentation correctness, especially the kinematic math:
 
 ```bash
 pytest tests/ -v
@@ -170,7 +170,32 @@ pytest tests/ -v
 Key test categories:
 - **Mirror kinematic tests**: arm swap, per-joint sign flip, double-flip identity (`mirror(mirror(x)) == x`)
 - **Visual safety tests**: images modified but state/action vectors untouched
-- **Noise statistical tests**: zero-mean, correct std, dtype preservation
+- **Noise statistical tests**: zero-mean, correct std, dtype preservation, per-dimension scaling, boundary clipping
+
+### Noise Validation
+
+A standalone validation script verifies the noise augmentation on real dataset data:
+
+```bash
+python validate_noise.py                              # Default: aloha_static_cups_open, episode 0
+python validate_noise.py --noise-std 0.02             # Test with different noise level
+python validate_noise.py --dataset lerobot/my_dataset  # Use a different dataset
+```
+
+The script runs three checks:
+1. **Statistical verification** — confirms noise is zero-mean with the expected standard deviation
+2. **Boundary check** — reports out-of-bounds values before and after clipping (with clipping enabled, 0% violations)
+3. **Trajectory visualization** — plots original vs augmented trajectory per joint dimension
+
+**Action trajectories** (14-DOF ALOHA, `noise_std=0.01`):
+
+![Action noise validation](noise_validation_action.png)
+
+**Observation state trajectories:**
+
+![State noise validation](noise_validation_state.png)
+
+Per-dimension scaling ensures consistent noise proportions across all joints — small-range joints (e.g., Dim 0, range ~0.04) get small noise, while large-range joints (e.g., Dim 4, range ~1.4) get proportionally larger noise.
 
 ## How it works
 
@@ -295,7 +320,8 @@ configs/
 tests/
     test_mirror.py       # Kinematic correctness tests (15 tests)
     test_visual.py       # Visual safety tests (7 tests)
-    test_action_noise.py # Noise statistical tests (7 tests)
+    test_action_noise.py # Noise statistical + clipping tests (10 tests)
+validate_noise.py       # Noise validation script (stats, bounds, plots)
 .env.example             # Template for API keys
 requirements.txt
 ```
