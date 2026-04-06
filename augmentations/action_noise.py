@@ -40,8 +40,9 @@ class ActionNoiseAugmentation(Augmentation):
                     noise = np.random.normal(0, self.noise_std * per_dim_std, result[key].shape)
                 else:
                     noise = np.random.normal(0, self.noise_std, result[key].shape)
-                noisy = (result[key] + noise).astype(result[key].dtype)
+                dtype = result[key].dtype
+                noisy = (result[key] + noise).astype(dtype)
                 if key in self.stats:
-                    noisy = np.clip(noisy, self.stats[key]["min"], self.stats[key]["max"])
+                    noisy = np.clip(noisy, self.stats[key]["min"], self.stats[key]["max"]).astype(dtype)
                 result[key] = noisy
         return result
