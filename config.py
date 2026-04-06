@@ -50,11 +50,35 @@ ROBOT_CONFIGS = {
             ],
         }
     },
-    # Placeholder for other common robots
-    "so_100": {
+    "mobile_aloha": {
+        "mirror": {
+            "arm_size": 7,
+            "sign_flip_within_arm": [0, 3, 5],
+            "camera_swap_pairs": [
+                ("observation.images.cam_left_wrist", "observation.images.cam_right_wrist"),
+            ],
+            # Note: Mobile ALOHA also has a base, but usually base movements are mirrored 
+            # by sign-flipping the rotation component in the state vector if present.
+        }
+    },
+    "so100": {
         "mirror": {
             "arm_size": 6,
-            "sign_flip_within_arm": [1, 2],
+            "sign_flip_within_arm": [0, 4],  # shoulder_pan (0), wrist_roll (4)
+            "camera_swap_pairs": [],
+        }
+    },
+    "koch": {
+        "mirror": {
+            "arm_size": 6,
+            "sign_flip_within_arm": [0, 4],
+            "camera_swap_pairs": [],
+        }
+    },
+    "umi": {
+        "mirror": {
+            "arm_size": 7,
+            "sign_flip_within_arm": [0, 2, 4, 6], # typical for Franka-style 7DOF
             "camera_swap_pairs": [],
         }
     },
