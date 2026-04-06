@@ -2,9 +2,25 @@
 """CLI entry point for LeRobot dataset augmentation."""
 
 import argparse
+import os
 import sys
+from pathlib import Path
 
 from huggingface_hub import HfApi
+
+
+def load_env():
+    """Load .env file if it exists (simple key=value parser, no dependency needed)."""
+    env_path = Path(__file__).parent / ".env"
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, value = line.partition("=")
+                os.environ.setdefault(key.strip(), value.strip())
+
+
+load_env()
 
 from augmentations import get_augmentation, REGISTRY
 from pipeline import run_pipeline

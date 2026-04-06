@@ -4,6 +4,7 @@ import numpy as np
 
 from augmentations import register
 from augmentations.base import Augmentation
+import config
 
 
 @register("mirror")
@@ -18,23 +19,13 @@ class MirrorAugmentation(Augmentation):
 
     def __init__(
         self,
-        arm_size: int = 7,
+        arm_size: int = config.MIRROR_ARM_SIZE,
         sign_flip_within_arm: list[int] | None = None,
         camera_swap_pairs: list[tuple[str, str]] | None = None,
     ):
-        """
-        Args:
-            arm_size: Number of joints per arm (default 7 for ALOHA).
-            sign_flip_within_arm: Indices within each arm to sign-flip.
-                Default for ALOHA: [0, 3, 5] (waist, forearm_roll, wrist_rotate).
-            camera_swap_pairs: Pairs of camera keys to swap.
-                Default: [("observation.images.cam_left_wrist", "observation.images.cam_right_wrist")].
-        """
         self.arm_size = arm_size
-        self.sign_flip_within_arm = sign_flip_within_arm or [0, 3, 5]
-        self.camera_swap_pairs = camera_swap_pairs or [
-            ("observation.images.cam_left_wrist", "observation.images.cam_right_wrist"),
-        ]
+        self.sign_flip_within_arm = sign_flip_within_arm or config.MIRROR_SIGN_FLIP_WITHIN_ARM
+        self.camera_swap_pairs = camera_swap_pairs or config.MIRROR_CAMERA_SWAP_PAIRS
 
         # Precompute absolute sign-flip indices for the full joint vector
         self._sign_flip_indices = []
