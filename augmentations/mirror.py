@@ -19,19 +19,41 @@ class MirrorAugmentation(Augmentation):
 
     def __init__(
         self,
-        arm_size: int = config.MIRROR_ARM_SIZE,
+        arm_size: int | None = None,
         sign_flip_within_arm: list[int] | None = None,
         camera_swap_pairs: list[tuple[str, str]] | None = None,
     ):
-        self.arm_size = arm_size
+        # Use provided values, or fallback to config defaults if prepare isn't called
+        self.arm_size = arm_size if arm_size is not None else config.MIRROR_ARM_SIZE
         self.sign_flip_within_arm = sign_flip_within_arm or config.MIRROR_SIGN_FLIP_WITHIN_ARM
         self.camera_swap_pairs = camera_swap_pairs or config.MIRROR_CAMERA_SWAP_PAIRS
+        self._recompute_indices()
 
-        # Precompute absolute sign-flip indices for the full joint vector
+    def _recompute_indices(self):
+        """Precompute absolute sign-flip indices for the full joint vector."""
         self._sign_flip_indices = []
-        for offset in [0, arm_size]:
+        for offset in [0, self.arm_size]:
             for idx in self.sign_flip_within_arm:
                 self._sign_flip_indices.append(offset + idx)
+
+    def prepare(self, tasks: list[str], robot_cfg: dict | None = None):
+        """Update settings based on robot metadata."""
+        if not robot_cfg:
+            return
+
+        cfg = robot_cfg.get("mirror", {})
+        if not cfg:
+            return
+
+        print(f"  Reconfiguring mirror for robot-specific settings")
+        if "arm_size" in cfg:
+            self.arm_size = cfg["arm_size"]
+        if "sign_flip_within_arm" in cfg:
+            self.sign_flip_within_arm = cfg["sign_flip_within_arm"]
+        if "camera_swap_pairs" in cfg:
+            self.camera_swap_pairs = cfg["camera_swap_pairs"]
+
+        self._recompute_indices()
 
     @property
     def name(self) -> str:

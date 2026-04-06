@@ -23,3 +23,16 @@ class Augmentation(ABC):
         Returns:
             Modified frame dict (should be a copy, not in-place).
         """
+
+    def prepare(self, tasks: list[str], robot_cfg: dict | None = None):
+        """Prepare augmentation with dataset-specific metadata.
+
+        Args:
+            tasks: List of all unique task strings in the dataset.
+            robot_cfg: Dictionary with robot-specific settings from config.py.
+        """
+        pass
+
+    def on_episode_start(self):
+        """Optional hook called at the start of each augmented episode."""
+        pass

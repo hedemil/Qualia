@@ -10,7 +10,7 @@ Takes a source LeRobot dataset, applies one or more augmentations, and produces 
 
 | Augmentation | Name | Description |
 |---|---|---|
-| Episode Mirroring | `mirror` | Horizontally flips camera images and swaps left/right arm joints. For bimanual robots (ALOHA), this doubles the dataset with physically meaningful variation. |
+| Episode Mirroring | `mirror` | Horizontally flips camera images and swaps left/right arm joints. Supports dynamic detection for **ALOHA, Mobile ALOHA, SO-100, Koch, and UMI**. |
 | Visual Jitter | `visual` | Applies random color jitter (brightness, contrast, saturation) and Gaussian blur. Parameters are sampled once per episode for temporal consistency. |
 | Action/State Noise | `action_noise` | Adds Gaussian noise to both `action` and `observation.state` vectors for regularization. |
 | Instruction Variation | `instruction` | Uses Claude API to generate paraphrased task descriptions (e.g., "Pick up the cup" becomes "Grasp the mug"). Requires `ANTHROPIC_API_KEY`. |
@@ -60,9 +60,8 @@ python augment.py --source lerobot/aloha_static_cups_open \
 
 # With instruction variation (requires ANTHROPIC_API_KEY)
 python augment.py --source lerobot/aloha_static_cups_open \
-                  --target hedemil/aloha_cups_full \
-                  --augmentations mirror,visual,action_noise,instruction \
-                  --dry-run
+                  --target <your-username>/aloha_cups_full \
+                  --augmentations mirror,visual,action_noise,instruction
 
 # All options
 python augment.py --help
@@ -88,35 +87,35 @@ https://huggingface.co/spaces/lerobot/visualize_dataset?path=%2Fhedemil%2Faloha_
 
 ## Configuration
 
-All tunable parameters (LLM model, prompts, augmentation defaults) are centralized in **`config.py`**. Edit this file to customize behavior without modifying augmentation code.
+All tunable parameters (LLM model, prompts, augmentation defaults) are centralized in **`config.py`**. The tool automatically detects the `robot_type` from dataset metadata and applies the appropriate preset.
 
 Key settings:
+- `ROBOT_CONFIGS` — Presets for **ALOHA, Mobile ALOHA, SO-100, Koch, and UMI**.
 - `LLM_MODEL` — which Claude model to use for instruction variation
-- `LLM_PARAPHRASE_PROMPT` — the prompt template for generating paraphrases
 - `VISUAL_*` — brightness, contrast, saturation, blur parameters
 - `ACTION_NOISE_STD` — noise standard deviation
-- `MIRROR_*` — arm size, sign-flip indices, camera swap pairs
-
-## Example Result
-
-Dataset with mirror augmentation: [hedemil/aloha_cups_augmented](https://huggingface.co/datasets/hedemil/aloha_cups_augmented)
 
 ## How it works
 
-1. Downloads the source dataset using the LeRobotDataset API
-2. Creates a new dataset with the same schema (features, fps, robot type)
-3. For each episode: copies the original, then produces one augmented copy per augmentation
-4. Stats are computed incrementally per episode via `save_episode()`
-5. Calls `finalize()` to close parquet writers
-6. Pushes to HuggingFace Hub
+1. Downloads the source dataset using the LeRobotDataset API.
+2. Inspects `robot_type` metadata to select the correct augmentation parameters.
+3. Creates a new dataset with the same schema (features, fps, robot type).
+4. For each episode: copies the original, then produces one augmented copy per augmentation.
+5. Stats are computed incrementally per episode via `save_episode()`.
+6. Calls `finalize()` to close parquet writers and pushes to HuggingFace Hub.
 
 ### Mirror augmentation details
 
-For ALOHA's 14-DOF bimanual setup:
-- Camera images are horizontally flipped
-- Left arm joints (indices 0-6) are swapped with right arm joints (indices 7-13)
-- Joints whose positive direction reverses under mirroring (waist, forearm_roll, wrist_rotate) get sign-flipped
-- Left/right wrist cameras are swapped
+Mirroring handles both camera and joint transformations:
+- **Image Flipping:** All camera images are horizontally flipped.
+- **Camera Swapping:** Left/Right camera pairs (e.g., wrist cams) are swapped.
+- **Arm Swapping:** Left and right arm joint values are swapped.
+- **Sign Flipping:** Joints whose physical direction reverses under mirroring (e.g., waist rotation) are sign-flipped.
+
+**Presets:**
+- **ALOHA:** 14-DOF (7x2), flips waist, forearm roll, and wrist rotate.
+- **SO-100 / Koch:** 6-DOF, flips shoulder pan and wrist roll.
+- **UMI:** 7-DOF arm configuration.
 
 ### Instruction variation details
 
