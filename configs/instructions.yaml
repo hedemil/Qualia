@@ -1,0 +1,11 @@
+# Instruction variation only — LLM-based task paraphrasing
+# Usage: python augment.py --config configs/instructions.yaml --target hedemil/my_dataset
+#
+# Requires ANTHROPIC_API_KEY in .env
+
+source: lerobot/aloha_static_cups_open
+
+augmentations:
+  - name: instruction
+    params:
+      num_paraphrases: 5

@@ -12,11 +12,26 @@ LLM_MAX_TOKENS = 1024
 
 # Prompt template for generating task paraphrases.
 # {num_paraphrases} and {task} will be substituted at runtime.
+#
+# Prompt design informed by "Enhancing Linguistic Generalization of VLA:
+# Fine-Tuning OpenVLA via Synthetic Instruction Augmentation" (Shin, 2025,
+# arxiv:2603.16044), which showed that structured linguistic diversity
+# (imperative/goal-oriented/conditional forms, abstraction levels, synonym
+# variation) improves VLA generalization over simple paraphrasing.
 LLM_PARAPHRASE_PROMPT = (
-    "Generate exactly {num_paraphrases} different paraphrases of this robot task instruction. "
-    "Each paraphrase should use different words but preserve the exact same meaning and action. "
-    "Keep them concise (one sentence each). "
-    "Return ONLY the paraphrases, one per line, no numbering or bullets.\n\n"
+    "You are a linguistic expert specializing in robotic task annotation. "
+    "Generate exactly {num_paraphrases} diverse natural language instructions "
+    "that are semantically equivalent to the original robot task instruction below.\n\n"
+    "Requirements:\n"
+    "- Ensure linguistic variety: use different sentence structures "
+    "(imperative, goal-oriented, and conditional forms)\n"
+    "- Vary the level of abstraction: include instructions ranging from "
+    "low-level motor descriptions to high-level intent\n"
+    "- Use vocabulary diversity: use synonyms for objects (e.g., 'item', 'target', "
+    "'utensil') and actions (e.g., 'grasp', 'pick up', 'relocate')\n"
+    "- Each instruction must preserve the exact same physical action and goal\n"
+    "- Keep them concise (one sentence each)\n\n"
+    "Return ONLY the {num_paraphrases} instructions, one per line, no numbering or bullets.\n\n"
     "Original: {task}"
 )
 

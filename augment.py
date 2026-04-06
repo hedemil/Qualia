@@ -80,13 +80,6 @@ def parse_args():
         help="Number of threads for AV1 video encoding (default: auto). "
              "Higher values use more CPU cores for faster encoding.",
     )
-    parser.add_argument(
-        "--batch-encoding-size",
-        type=int,
-        default=32,
-        help="Number of episodes to batch before encoding videos (default: 32). "
-             "Higher values improve throughput by amortizing encoder startup.",
-    )
     return parser.parse_args()
 
 
@@ -184,7 +177,6 @@ def main():
         dry_run=args.dry_run,
         private=args.private,
         encoder_threads=args.encoder_threads,
-        batch_encoding_size=args.batch_encoding_size,
     )
 
 
