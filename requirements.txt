@@ -1,0 +1,6 @@
+lerobot
+torch
+torchvision
+opencv-python
+numpy
+tqdm
